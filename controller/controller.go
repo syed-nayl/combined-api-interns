@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 
 	"combined-api/db-connections"
@@ -72,31 +71,6 @@ func deleteAllMovie() int64 {
 
 // get all movies from database
 
-func getAllMovies() []primitive.M {
-	cur, err := db.InitConnectionMongo().Find(context.Background(), bson.D{{}})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var movies []primitive.M
-
-	for cur.Next(context.Background()) {
-		var movie bson.M
-		err := cur.Decode(&movie)
-		if err != nil {
-			log.Fatal(err)
-		}
-		movies = append(movies, movie)
-	}
-
-	defer cur.Close(context.Background())
-
-	f, _ := os.Create("output.json")
-	as_json, _ := json.MarshalIndent(movies, "", "\t")
-	f.Write(as_json)
-	return movies
-}
-
 // Actual controller - file
 
 func GetMyAllMovies(w http.ResponseWriter, r *http.Request) {
@@ -154,6 +128,7 @@ func New(db *gorm.DB) Handler {
 
 func (h Handler) AddBook(w http.ResponseWriter, r *http.Request) {
 	// Read to request body
+
 	defer r.Body.Close()
 	body, err := ioutil.ReadAll(r.Body)
 
@@ -194,21 +169,6 @@ func (h Handler) DeleteBook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode("Deleted")
-}
-
-func (h Handler) GetAllBooks(w http.ResponseWriter, r *http.Request) {
-	var books []models.Book
-
-	if result := h.DB.Find(&books); result.Error != nil {
-		fmt.Println(result.Error)
-	}
-
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(books)
-	f, _ := os.Create("output.json")
-	as_json, _ := json.MarshalIndent(books, "", "\t")
-	f.Write(as_json)
 }
 
 func (h Handler) GetBook(w http.ResponseWriter, r *http.Request) {
@@ -259,4 +219,39 @@ func (h Handler) UpdateBook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode("Updated")
+}
+
+func getAllMovies() []primitive.M {
+	cur, err := db.InitConnectionMongo().Find(context.Background(), bson.D{{}})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var movies []primitive.M
+
+	for cur.Next(context.Background()) {
+		var movie bson.M
+		err := cur.Decode(&movie)
+		if err != nil {
+			log.Fatal(err)
+		}
+		movies = append(movies, movie)
+	}
+
+	defer cur.Close(context.Background())
+
+	return movies
+}
+
+func (h Handler) GetAllBooks(w http.ResponseWriter, r *http.Request) []models.Book {
+	var books []models.Book
+
+	if result := h.DB.Find(&books); result.Error != nil {
+		fmt.Println(result.Error)
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(books)
+	return books
 }
